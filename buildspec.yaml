@@ -1,0 +1,86 @@
+version: 0.2
+
+env:
+  variables:
+    GO_VERSION: "1.24.3"
+    CGO_ENABLED: "0"
+    GOOS: "linux"
+    GOARCH: "arm64"
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.x
+    commands:
+      - echo "Installation des dépendances système"
+      - yum update -y
+      - yum install -y git zip unzip
+      - curl -O -s https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz
+      - rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+      - export PATH=$PATH:/usr/local/go/bin
+      - go version
+      - echo "Assume Role to Access Target Account"
+      - CREDS=$(aws sts assume-role --role-arn arn:aws:iam::$ENV_ACCOUNT:role/DevOpsSwitchRole --role-session-name codebuild-session)
+      - export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.Credentials.AccessKeyId')
+      - export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.Credentials.SecretAccessKey')
+      - export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')
+
+  pre_build:
+    commands:
+      - echo "Phase de pré-build - $(date)"
+      - echo "Version de Go installée:"
+      - go version
+      - echo "Initialisation du module Go et téléchargement des dépendances"
+      - cd $CODEBUILD_SRC_DIR
+      - go mod download
+      - go mod verify
+      - echo "Vérification du code source"
+      - gofmt -l .
+      - go vet -tags lambda ./...
+
+  build:
+    commands:
+      - echo "Phase de build - $(date)"
+      - echo "Compilation de l'application Go en binaire statique (bootstrap)"
+      - cd $CODEBUILD_SRC_DIR
+      - export CGO_ENABLED=0
+      - export GOOS=linux
+      - export GOARCH=arm64  # ARM64 confirmé
+      - go mod tidy
+      - go build -tags lambda -ldflags="-s -w" -o bootstrap ./main.go
+      - chmod +x bootstrap
+      - echo "Exécution des tests unitaires"
+      - go test -v ./... -coverprofile=coverage.out || true
+      - echo "Génération du rapport de couverture"
+      - go tool cover -html=coverage.out -o coverage.html || true
+
+  post_build:
+    commands:
+      - echo "Phase de post-build - $(date)"
+      - cd $CODEBUILD_SRC_DIR
+      - chmod 755 bootstrap
+      - zip -r function.zip bootstrap
+      - echo "Taille du package:"
+      - ls -lah function.zip
+      - TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S')
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - NEW_VERSION=$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION}_${TIMESTAMP}")
+      - echo $NEW_VERSION
+      - export VERSION=$NEW_VERSION
+      - export S3_PATH=$BUCKET_NAME/$FUNCTION_NAME/function.zip
+      - echo "Upload to S3 bucket s3://$S3_PATH"
+      - aws s3 cp function.zip s3://$S3_PATH
+
+artifacts:
+  files:
+    - function.zip
+    - bootstrap
+    - coverage.html
+    - template.yaml
+  discard-paths: no
+
+reports:
+  coverage-report:
+    files:
+      - coverage.out
+    file-format: GOLANG-COVERAGE
