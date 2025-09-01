@@ -1,0 +1,12 @@
+.env.local
+bootstrap
+function.zip
+coverage.out
+coverage.html
+.idea/
+.vscode/
+.env
+.DS_Store
+Thumbs.db
+.air.toml
+tmp/
