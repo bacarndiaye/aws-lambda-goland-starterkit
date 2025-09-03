@@ -1,0 +1,49 @@
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+  # Commande pour compiler l'application
+  cmd = "go build -o ./tmp/main ./local-main.go"
+  
+  # Binaire à exécuter
+  bin = "tmp/main"
+  
+  # Fichiers/dossiers à surveiller
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml", "json", "env"]
+  
+  # Exclure certains fichiers/dossiers
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", ".git", ".vscode", ".idea"]
+  exclude_file = []
+  exclude_regex = ["_test.go"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  
+  # Tuer l'ancien processus avant de redémarrer
+  kill_delay = "0s"
+  
+  # Envoyer le signal interrupt avant SIGKILL (par défaut SIGTERM)
+  send_interrupt = false
+  
+  # Délai après l'envoi du signal interrupt avant d'envoyer SIGKILL
+  stop_on_root = ""
+
+[color]
+  # Couleurs pour les logs
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[log]
+  # Afficher les logs d'Air
+  main_only = false
+
+[misc]
+  # Nettoyer lors de l'arrêt
+  clean_on_exit = false
+
+[screen]
+  clear_on_rebuild = false
+  keep_scroll = true
