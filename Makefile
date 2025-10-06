@@ -1,4 +1,4 @@
-APP=nexus-enedis-m23-measure-lambda
+APP=Your-name-lambda
 
 .PHONY: tidy run build package clean
 
