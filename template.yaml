@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Nexus Enedis M23 Measure - Gin on AWS Lambda
+Description: Name lambda - Gin on AWS Lambda
 
 Globals:
   Function:
